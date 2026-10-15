@@ -151,7 +151,12 @@ class HuopanClient:
         """
         parsed = urllib.parse.urlparse(url_str)
         qseq = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
-        service = "seller" if parsed.path.startswith("/seller-api") else "admin"
+        if parsed.path.startswith("/buyer-api"):
+            service = "buyer"
+        elif parsed.path.startswith("/seller-api"):
+            service = "seller"
+        else:
+            service = "admin"
         ts = ts or str(int(time.time()))
         nonce = nonce or uuid.uuid4().hex
         headers = {

@@ -103,7 +103,7 @@ func (c *Client) doWithJSON(method, path string, body interface{}) (*Response, e
 }
 
 // DoRequest 核心方法：生成时间戳/Nonce → 签名 → 发送
-// service 按路径自动推断：/seller-api 前缀为 seller，其余为 admin
+// service 按路径自动推断：/buyer-api→buyer、/seller-api→seller，其余为 admin
 func (c *Client) DoRequest(method, path string, query url.Values, body []byte) (*Response, error) {
 	rawURL := c.BaseURL + path
 	if len(query) > 0 {
@@ -147,7 +147,10 @@ func SignRequest(secretID, secretKey, method, rawURL string, body []byte, nonce,
 		return nil, fmt.Errorf("URL 解析失败: %w", err)
 	}
 	service := "admin"
-	if strings.HasPrefix(u.Path, "/seller-api") {
+	switch {
+	case strings.HasPrefix(u.Path, "/buyer-api"):
+		service = "buyer"
+	case strings.HasPrefix(u.Path, "/seller-api"):
 		service = "seller"
 	}
 	canonicalHeaders := map[string]string{

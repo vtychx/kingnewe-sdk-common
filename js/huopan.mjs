@@ -68,7 +68,11 @@ const signHost = (u) => {
 export function sign(secretId, secretKey, method, urlStr, body = "", opts = {}) {
   const u = new URL(urlStr);
   const qseq = [...u.searchParams.entries()];
-  const service = u.pathname.startsWith("/seller-api") ? "seller" : "admin";
+  const service = u.pathname.startsWith("/buyer-api")
+    ? "buyer"
+    : u.pathname.startsWith("/seller-api")
+      ? "seller"
+      : "admin";
   const ts = opts.ts ?? String(Math.floor(Date.now() / 1000));
   const nonce = opts.nonce ?? randomBytes(16).toString("hex");
   const headers = {

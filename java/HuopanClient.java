@@ -109,7 +109,7 @@ public class HuopanClient {
 
     /**
      * 计算 HPS1 签名，返回需附加的请求头（含 Authorization）。
-     * service 按路径自动推断：/seller-api 前缀为 seller，其余为 admin。
+     * service 按路径自动推断：/buyer-api→buyer、/seller-api→seller，其余为 admin。
      * nonce/ts 由调用方生成（测试时固定以对齐黄金向量）。
      */
     public static Map<String, String> sign(String secretId, String secretKey, String method,
@@ -124,7 +124,12 @@ public class HuopanClient {
         String path = slash == -1 ? "/"
                 : rawUrl.substring(slash, qmark == -1 ? rawUrl.length() : qmark);
         String rawQuery = qmark == -1 ? null : rawUrl.substring(qmark + 1);
-        String service = path.startsWith("/seller-api") ? "seller" : "admin";
+        String service = "admin";
+        if (path.startsWith("/buyer-api")) {
+            service = "buyer";
+        } else if (path.startsWith("/seller-api")) {
+            service = "seller";
+        }
         Map<String, String> headers = new TreeMap<>();
         headers.put("host", signHost(hostPart));
         headers.put("x-hp-algorithm", ALGORITHM);

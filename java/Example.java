@@ -6,21 +6,22 @@ import java.util.Map;
  *
  * ============================ 凭证与访问端匹配规则 ============================
  *
- * 平台有两类 API 凭证（在对应后台的「API凭证」页面创建），与访问路径一一对应，
+ * 平台有三类 API 凭证（在对应后台的「API凭证」页面创建），与访问路径一一对应，
  * 不能交叉访问（混用返回 E1007，提示信息会指明该凭证应使用的路径前缀）：
  *
  *   超管端凭证（在超管后台创建） → 调用 /api/**        路径，service=admin
  *   卖家端凭证（在卖家后台创建） → 调用 /seller-api/** 路径，service=seller
+ *   买家端凭证（在买家后台创建） → 调用 /buyer-api/**  路径，service=buyer
  *
  * SDK 会根据请求路径前缀自动推断 service，无需手动指定。
  *
  * ============================ 运行 ============================
  *
  * 运行前准备：
- * 1. 登录超管端或卖家端后台 →「API凭证」→ 创建凭证，保存 SecretId 与 SecretKey
+ * 1. 登录超管端/卖家端/买家端后台 →「API凭证」→ 创建凭证，保存 SecretId 与 SecretKey
  *    （明文仅创建时展示一次）
  * 2. 修改下方 SECRET_ID / SECRET_KEY / BASE_URL（或改用环境变量 System.getenv）
- * 3. 编译运行（HUOPAN_SCOPE=admin 演示超管端 / seller 演示卖家端）：
+ * 3. 编译运行（HUOPAN_SCOPE=admin 演示超管端 / seller 演示卖家端 / buyer 演示买家端）：
  *    javac HuopanClient.java Example.java
  *    HUOPAN_SCOPE=admin java Example
  *
@@ -55,6 +56,8 @@ public class Example {
         // ---------- 2. 按凭证类型演示对应端的调用 ----------
         if ("seller".equals(scope)) {
             runSellerExamples(client);
+        } else if ("buyer".equals(scope)) {
+            runBuyerExamples(client);
         } else {
             runAdminExamples(client);
         }
@@ -112,6 +115,30 @@ public class Example {
         // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
         // String resp2 = client.post("/seller-api/products", "{\"name\":\"卖家示例商品\"}");
         // System.out.println("创建商品: " + resp2);
+    }
+
+    /** 买家端凭证调用 /buyer-api/** 接口 */
+    static void runBuyerExamples(HuopanClient client) throws Exception {
+        // ---- 2.1 GET /buyer-api/profile：当前买家个人信息 ----
+        try {
+            String resp = client.get("/buyer-api/profile", null);
+            System.out.println("买家信息响应: " + excerpt(resp));
+        } catch (Exception e) {
+            System.out.println("获取买家信息失败: " + e.getMessage());
+            return;
+        }
+
+        // ---- 2.2 GET /buyer-api/orders：当前买家的订单列表（数据按凭证买家隔离） ----
+        Map<String, String> query = new HashMap<>();
+        query.put("page", "1");
+        query.put("page_size", "5");
+        String resp = client.get("/buyer-api/orders", query);
+        System.out.println("订单列表响应: " + excerpt(resp));
+
+        // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+        // String resp2 = client.post("/buyer-api/addresses",
+        //         "{\"receiver\":\"张三\",\"phone\":\"13800138000\"}");
+        // System.out.println("创建地址: " + resp2);
     }
 
     /** 截断长响应便于控制台查看 */

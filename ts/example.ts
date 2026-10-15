@@ -3,24 +3,25 @@
  *
  * ============================ 凭证与访问端匹配规则 ============================
  *
- * 平台有两类 API 凭证（在对应后台的「API凭证」页面创建），与访问路径一一对应，
+ * 平台有三类 API 凭证（在对应后台的「API凭证」页面创建），与访问路径一一对应，
  * 不能交叉访问（混用返回 E1007，提示信息会指明该凭证应使用的路径前缀）：
  *
  *   超管端凭证（在超管后台创建） → 调用 /api/**        路径，service=admin
  *   卖家端凭证（在卖家后台创建） → 调用 /seller-api/** 路径，service=seller
+ *   买家端凭证（在买家后台创建） → 调用 /buyer-api/**  路径，service=buyer
  *
  * SDK 会根据请求路径前缀自动推断 service，无需手动指定。
  *
  * ============================ 运行 ============================
  *
  * 运行前准备：
- * 1. 登录超管端或卖家端后台 →「API凭证」→ 创建凭证，保存 SecretId 与 SecretKey
+ * 1. 登录超管端/卖家端/买家端后台 →「API凭证」→ 创建凭证，保存 SecretId 与 SecretKey
  *    （明文仅创建时展示一次）
  * 2. 设置环境变量（或直接修改下面的默认值）：
  *    export HUOPAN_SECRET_ID="HPAKIDxxxx"
  *    export HUOPAN_SECRET_KEY="你的SecretKey"
  *    export HUOPAN_BASE_URL="https://www.kingnewe.com"  # 测试环境可用 http://101.42.20.80:8080
- *    export HUOPAN_SCOPE="admin"   # admin=演示超管端（默认）；seller=演示卖家端
+ *    export HUOPAN_SCOPE="admin"   # admin=演示超管端（默认）；seller=演示卖家端；buyer=演示买家端
  * 3. 运行：node --experimental-strip-types example.ts
  *    或经 tsc 编译后运行
  *
@@ -61,10 +62,14 @@ const main = async (): Promise<void> => {
   });
 
   // ---------- 2. 按凭证类型演示对应端的调用 ----------
-  // 超管端凭证 → HUOPAN_SCOPE=admin（默认）；卖家端凭证 → HUOPAN_SCOPE=seller
+  // 超管端凭证 → HUOPAN_SCOPE=admin（默认）
+  // 卖家端凭证 → HUOPAN_SCOPE=seller
+  // 买家端凭证 → HUOPAN_SCOPE=buyer
   const scope = envOr("HUOPAN_SCOPE", "admin").toLowerCase();
   if (scope === "seller") {
     await runSellerExamples(client);
+  } else if (scope === "buyer") {
+    await runBuyerExamples(client);
   } else {
     await runAdminExamples(client);
   }
@@ -141,6 +146,38 @@ async function runSellerExamples(client: HuopanClient): Promise<void> {
   // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
   // const resp = await client.post("/seller-api/products", { name: "卖家示例商品" });
   // console.log("创建商品:", resp.statusCode, resp.body);
+}
+
+/** 买家端凭证调用 /buyer-api/** 接口 */
+async function runBuyerExamples(client: HuopanClient): Promise<void> {
+  // ---- 2.1 GET /buyer-api/profile：当前买家个人信息 ----
+  try {
+    const resp = await client.get("/buyer-api/profile");
+    const body = resp.json<PlatformResponse<unknown>>();
+    if (body.code !== 0) {
+      console.log(`获取买家信息失败: code=${body.code} msg=${body.msg}`);
+      return;
+    }
+    console.log(`买家信息: ${dataExcerpt(body.data)}`);
+  } catch (e) {
+    console.log(`网络请求失败: ${(e as Error).message}`);
+    return;
+  }
+
+  // ---- 2.2 GET /buyer-api/orders：当前买家的订单列表（数据按凭证买家隔离） ----
+  {
+    const resp = await client.get("/buyer-api/orders", { page: 1, page_size: 5 });
+    const body = resp.json<PlatformResponse<unknown>>();
+    if (body.code === 0) {
+      console.log(`订单列表(买家端): ${dataExcerpt(body.data)}`);
+    } else {
+      console.log(`订单列表失败: code=${body.code} msg=${body.msg}`);
+    }
+  }
+
+  // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+  // const resp = await client.post("/buyer-api/addresses", { receiver: "张三", phone: "13800138000" });
+  // console.log("创建地址:", resp.statusCode, resp.body);
 }
 
 void main();
