@@ -31,6 +31,11 @@
  *   - 签名/凭证类错误 code 为字符串 "E1001"-"E1008"（E1001 凭证不存在、
  *     E1002 签名失败、E1003 凭证已禁用、E1004 Nonce 重复、E1005 时间戳过期、
  *     E1006 签名头格式错误、E1007 端不匹配、E1008 账号状态异常，详见 README）
+ *
+ * ============================ 游客视图（重要） ============================
+ * 未携带签名头（直接用浏览器/curl 打开接口 URL）时，/buyer-api/** 查询接口按游客
+ * 身份返回：code 仍为 0，但 skus[].price 与 skus[].stock 均为 0。这是正常行为，
+ * 不代表接口异常或无数据；必须经本 SDK 签名调用才能看到真实价格与库存。
  */
 import { HuopanClient } from "./huopan.mjs";
 
@@ -161,7 +166,39 @@ async function runBuyerExamples(client) {
     }
   }
 
-  // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+  // ---- 2.3 GET /buyer-api/products：商品列表（签名后价格库存为真实值） ----
+  {
+    const resp = await client.get("/buyer-api/products", { page: 1, page_size: 5 });
+    const body = resp.json();
+    if (body.code === 0) {
+      const data = body.data || {};
+      const items = data.list || [];
+      console.log(`商品列表(买家端): total=${data.total} 本页=${items.length}`);
+      for (const p of items) {
+        const skus = (p.skus || []).map((s) => `(${s.spec_name},${s.price},${s.stock})`).join(" ");
+        console.log(`  ${p.id} ${p.name} skus(规格,价格,库存)=${skus}`);
+      }
+    } else {
+      console.log(`商品列表失败: code=${body.code} msg=${body.msg}`);
+    }
+  }
+
+  // ---- 2.4 GET /buyer-api/products/{id}：商品详情（示例 id=63） ----
+  {
+    const resp = await client.get("/buyer-api/products/63");
+    const body = resp.json();
+    if (body.code === 0) {
+      const p = body.data || {};
+      console.log(`商品详情(买家端): ${p.id} ${p.name}`);
+      for (const s of p.skus || []) {
+        console.log(`  sku=${s.sku_code} 规格=${s.spec_name} price=${s.price} stock=${s.stock}`);
+      }
+    } else {
+      console.log(`商品详情失败: code=${body.code} msg=${body.msg}`);
+    }
+  }
+
+  // ---- 2.5 POST 写操作示例（默认注释，取消注释后真实生效） ----
   // const resp = await client.post("/buyer-api/addresses", { receiver: "张三", phone: "13800138000" });
   // console.log("创建地址:", resp.statusCode, resp.body);
 }

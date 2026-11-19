@@ -6,7 +6,7 @@
 
 ## 获取凭证
 
-登录超管端/卖家端后台 → 「API 凭证」→ 创建，获得 `SecretId` 与 `SecretKey`（明文仅创建时显示一次）。
+登录超管端/卖家端/买家端后台 → 「API 凭证」→ 创建，获得 `SecretId` 与 `SecretKey`（明文仅创建时显示一次）。
 
 ## 快速开始
 
@@ -62,7 +62,7 @@ func main() {
 | `Delete(path)` | 签名 DELETE |
 | `DoRequest(method, path, query, body []byte)` | 通用方法（body 为原始字节，签名与发送同源） |
 
-`service` 按路径自动推断：`/seller-api` 前缀 → `seller`，其余 → `admin`。**凭证类型与路径前缀必须匹配**：卖家端凭证只能调用 `/seller-api/**`，超管端凭证只能调用 `/api/**`，混用返回 `E1007`。
+`service` 按路径自动推断：`/buyer-api` 前缀 → `buyer`，`/seller-api` 前缀 → `seller`，其余 → `admin`。**凭证类型与路径前缀必须匹配**：买家端凭证只能调用 `/buyer-api/**`，卖家端凭证只能调用 `/seller-api/**`，超管端凭证只能调用 `/api/**`，混用返回 `E1007`。
 
 ## 错误码
 
@@ -85,11 +85,12 @@ go test ./... -v   # 含黄金向量测试（与服务端跨语言一致性基�
 
 ## 完整示例
 
-`sdk/go/example/main.go`：初始化 → GET /api/me（解析身份）→ GET 带中文 query 的列表 → POST 写操作（注释）→ 错误码处理。
+`sdk/go/example/main.go`：初始化 → 按 `HUOPAN_SCOPE` 演示三端（admin：身份与商品列表；seller：概览与商品列表；buyer：商品列表与商品详情）→ POST 写操作（注释）→ 错误码处理。买家端示例会打印 `skus[].price` 与 `skus[].stock`。
 
 ```bash
 export HUOPAN_SECRET_ID="HPAKID..." HUOPAN_SECRET_KEY="..." HUOPAN_BASE_URL="https://www.kingnewe.com" HUOPAN_SCOPE="admin"
 # 卖家端凭证: HUOPAN_SCOPE="seller"
+# 买家端凭证: HUOPAN_SCOPE="buyer"
 go run ./example
 ```
 

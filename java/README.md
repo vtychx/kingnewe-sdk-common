@@ -35,11 +35,12 @@ java HuopanClient selftest   # 黄金向量自检（须输出 PASS）
 
 ## 完整示例
 
-`sdk/java/Example.java`：初始化 → GET /api/me（解析身份）→ GET 带中文 query 的列表 → POST 写操作（注释）→ 错误码处理。
+`sdk/java/Example.java`：初始化 → 按 `HUOPAN_SCOPE` 演示三端（admin：身份与商品列表；seller：概览与商品列表；buyer：商品列表与商品详情）→ POST 写操作（注释）→ 错误码处理。买家端示例会打印 `skus[].price` 与 `skus[].stock`。
 
 ```bash
 export HUOPAN_SECRET_ID="HPAKID..." HUOPAN_SECRET_KEY="..." HUOPAN_BASE_URL="https://www.kingnewe.com" HUOPAN_SCOPE="admin"
 # 卖家端凭证: HUOPAN_SCOPE="seller"
+# 买家端凭证: HUOPAN_SCOPE="buyer"
 javac Example.java && java Example
 ```
 
@@ -53,7 +54,7 @@ javac Example.java && java Example
 | `delete(path)` | 签名 DELETE |
 | `sign(secretId, secretKey, method, rawUrl, body, nonce, ts)`（静态） | 仅计算签名头，供测试 |
 
-`service` 按路径自动推断：`/seller-api` 前缀 → `seller`，其余 → `admin`。
+`service` 按路径自动推断：`/buyer-api` 前缀 → `buyer`，`/seller-api` 前缀 → `seller`，其余 → `admin`。凭证类型与访问端不匹配会返回 `E1007`。
 
 ## 错误码
 

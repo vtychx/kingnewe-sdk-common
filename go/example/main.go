@@ -30,6 +30,12 @@
 //   - 签名/凭证类错误 code 为字符串 "E1001"-"E1008"（E1001 凭证不存在、
 //     E1002 签名失败、E1003 凭证已禁用、E1004 Nonce 重复、E1005 时间戳过期、
 //     E1006 签名头格式错误、E1007 端不匹配、E1008 账号状态异常，详见 README）
+//
+// ============================ 游客视图（重要） ============================
+//
+// 未携带签名头（直接用浏览器/curl 打开接口 URL）时，/buyer-api/** 查询接口按游客
+// 身份返回：code 仍为 0，但 skus[].price 与 skus[].stock 均为 0。这是正常行为，
+// 不代表接口异常或无数据；必须经本 SDK 签名调用才能看到真实价格与库存。
 package main
 
 import (
@@ -208,7 +214,68 @@ func runBuyerExamples(client *huopan.Client) {
 		fmt.Printf("订单列表失败: code=%s msg=%s\n", stringsTrim(base.Code), base.Msg)
 	}
 
-	// ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+	// ---- 2.3 GET /buyer-api/products：商品列表（签名后价格库存为真实值） ----
+	resp, err = client.Get("/buyer-api/products", url.Values{"page": {"1"}, "page_size": {"5"}})
+	if err != nil {
+		panic(err)
+	}
+	_ = json.Unmarshal(resp.Body, &base)
+	if base.ok() {
+		var listData struct {
+			Total int64 `json:"total"`
+			List  []struct {
+				ID   uint   `json:"id"`
+				Name string `json:"name"`
+				SKUs []struct {
+					SpecName string  `json:"spec_name"`
+					Price    float64 `json:"price"`
+					Stock    int     `json:"stock"`
+				} `json:"skus"`
+			} `json:"list"`
+		}
+		_ = json.Unmarshal(base.Data, &listData)
+		fmt.Printf("商品列表(买家端): total=%d 本页=%d\n", listData.Total, len(listData.List))
+		for _, p := range listData.List {
+			fmt.Printf("  %d %s skus(规格,价格,库存)=[", p.ID, p.Name)
+			for i, s := range p.SKUs {
+				if i > 0 {
+					fmt.Print(" ")
+				}
+				fmt.Printf("(%s %.2f/%d)", s.SpecName, s.Price, s.Stock)
+			}
+			fmt.Println("]")
+		}
+	} else {
+		fmt.Printf("商品列表失败: code=%s msg=%s\n", stringsTrim(base.Code), base.Msg)
+	}
+
+	// ---- 2.4 GET /buyer-api/products/{id}：商品详情（示例 id=63） ----
+	resp, err = client.Get("/buyer-api/products/63", nil)
+	if err != nil {
+		panic(err)
+	}
+	_ = json.Unmarshal(resp.Body, &base)
+	if base.ok() {
+		var detail struct {
+			ID   uint   `json:"id"`
+			Name string `json:"name"`
+			SKUs []struct {
+				SKUCode  string  `json:"sku_code"`
+				SpecName string  `json:"spec_name"`
+				Price    float64 `json:"price"`
+				Stock    int     `json:"stock"`
+			} `json:"skus"`
+		}
+		_ = json.Unmarshal(base.Data, &detail)
+		fmt.Printf("商品详情(买家端): %d %s\n", detail.ID, detail.Name)
+		for _, s := range detail.SKUs {
+			fmt.Printf("  sku=%s 规格=%s price=%.2f stock=%d\n", s.SKUCode, s.SpecName, s.Price, s.Stock)
+		}
+	} else {
+		fmt.Printf("商品详情失败: code=%s msg=%s\n", stringsTrim(base.Code), base.Msg)
+	}
+
+	// ---- 2.5 POST 写操作示例（默认注释，取消注释后真实生效） ----
 	// resp, err = client.Post("/buyer-api/addresses", map[string]interface{}{
 	// 	"receiver": "张三",
 	// 	"phone":    "13800138000",

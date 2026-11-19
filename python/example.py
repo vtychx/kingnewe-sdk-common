@@ -30,6 +30,11 @@ SDK 会根据请求路径前缀自动推断 service，无需手动指定。
   - 签名/凭证类错误 code 为字符串 "E1001"-"E1008"（E1001 凭证不存在、
     E1002 签名失败、E1003 凭证已禁用、E1004 Nonce 重复、E1005 时间戳过期、
     E1006 签名头格式错误、E1007 端不匹配、E1008 账号状态异常，详见 README）
+
+============================ 游客视图（重要） ============================
+未携带签名头（直接用浏览器/curl 打开接口 URL）时，/buyer-api/** 查询接口按游客
+身份返回：code 仍为 0，但 skus[].price 与 skus[].stock 均为 0。这是正常行为，
+不代表接口异常或无数据；必须经本 SDK 签名调用才能看到真实价格与库存。
 """
 import json
 import os
@@ -152,7 +157,31 @@ def run_buyer_examples(client: HuopanClient) -> None:
     else:
         print(f"订单列表失败: {body.get('msg')}")
 
-    # ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+    # ---- 2.3 GET /buyer-api/products：商品列表（签名后价格库存为真实值） ----
+    resp = client.get("/buyer-api/products", query={"page": 1, "page_size": 5})
+    body = resp.json()
+    if body.get("code") == 0:
+        data = body.get("data") or {}
+        items = data.get("list") or []
+        print(f"商品列表(买家端): total={data.get('total')} 本页={len(items)}")
+        for p in items:
+            skus = [(s.get("spec_name"), s.get("price"), s.get("stock")) for s in (p.get("skus") or [])]
+            print(f"  {p.get('id')} {p.get('name')} skus(规格,价格,库存)={skus}")
+    else:
+        print(f"商品列表失败: code={body.get('code')} msg={body.get('msg')}")
+
+    # ---- 2.4 GET /buyer-api/products/{id}：商品详情（示例 id=63） ----
+    resp = client.get("/buyer-api/products/63")
+    body = resp.json()
+    if body.get("code") == 0:
+        p = body.get("data") or {}
+        print(f"商品详情(买家端): {p.get('id')} {p.get('name')}")
+        for s in p.get("skus") or []:
+            print(f"  sku={s.get('sku_code')} 规格={s.get('spec_name')} price={s.get('price')} stock={s.get('stock')}")
+    else:
+        print(f"商品详情失败: code={body.get('code')} msg={body.get('msg')}")
+
+    # ---- 2.5 POST 写操作示例（默认注释，取消注释后真实生效） ----
     # resp = client.post("/buyer-api/addresses", body={"receiver": "张三", "phone": "13800138000"})
     # print("创建地址:", resp.status_code, resp.json())
 

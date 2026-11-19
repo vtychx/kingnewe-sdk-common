@@ -1,5 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * huopan-sdk-java 使用示例：初始化客户端 → 签名调用 → 解析响应 → 错误处理。
@@ -32,6 +34,11 @@ import java.util.Map;
  *   （E1001 凭证不存在、E1002 签名失败、E1003 凭证已禁用、E1004 Nonce 重复、
  *   E1005 时间戳过期、E1006 签名头格式错误、E1007 端不匹配、E1008 账号状态异常）。
  * Java 标准库无 JSON 解析器，示例演示原始文本处理；生产建议引入 Jackson/Gson。
+ *
+ * ============================ 游客视图（重要） ============================
+ * 未携带签名头（直接用浏览器/curl 打开接口 URL）时，/buyer-api/** 查询接口按游客
+ * 身份返回：code 仍为 0，但 skus[].price 与 skus[].stock 均为 0。这是正常行为，
+ * 不代表接口异常或无数据；必须经本 SDK 签名调用才能看到真实价格与库存。
  */
 public class Example {
 
@@ -135,7 +142,20 @@ public class Example {
         String resp = client.get("/buyer-api/orders", query);
         System.out.println("订单列表响应: " + excerpt(resp));
 
-        // ---- 2.3 POST 写操作示例（默认注释，取消注释后真实生效） ----
+        // ---- 2.3 GET /buyer-api/products：商品列表（签名后价格库存为真实值） ----
+        Map<String, String> listQuery = new HashMap<>();
+        listQuery.put("page", "1");
+        listQuery.put("page_size", "5");
+        String listResp = client.get("/buyer-api/products", listQuery);
+        System.out.println("商品列表响应: " + excerpt(listResp));
+        System.out.println("  price=" + extract(listResp, "price") + " stock=" + extract(listResp, "stock"));
+
+        // ---- 2.4 GET /buyer-api/products/{id}：商品详情（示例 id=63） ----
+        String detailResp = client.get("/buyer-api/products/63", null);
+        System.out.println("商品详情响应: " + excerpt(detailResp));
+        System.out.println("  price=" + extract(detailResp, "price") + " stock=" + extract(detailResp, "stock"));
+
+        // ---- 2.5 POST 写操作示例（默认注释，取消注释后真实生效） ----
         // String resp2 = client.post("/buyer-api/addresses",
         //         "{\"receiver\":\"张三\",\"phone\":\"13800138000\"}");
         // System.out.println("创建地址: " + resp2);
@@ -144,5 +164,18 @@ public class Example {
     /** 截断长响应便于控制台查看 */
     static String excerpt(String s) {
         return s.length() <= 200 ? s : s.substring(0, 200) + "...";
+    }
+
+    /** 从响应 JSON 文本中提取某数值字段的全部取值（无 JSON 库时便于查看价格/库存） */
+    static String extract(String json, String field) {
+        Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*(-?[0-9.]+)").matcher(json);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(m.group(1));
+        }
+        return "[" + sb + "]";
     }
 }
