@@ -10,6 +10,7 @@
 | Java | `sdk/java/` | 仅 JDK 11+ | `javac HuopanClient.java && java HuopanClient selftest` |
 | JavaScript | `sdk/js/` | 零依赖（Node 18+） | `cd sdk/js && node huopan_test.mjs` |
 | TypeScript | `sdk/ts/` | 零依赖（Node 18+） | `cd sdk/ts && node --experimental-strip-types huopan_test.ts` |
+| C# | `csharp/` | 仅 .NET 标准库（8+） | `cd csharp && dotnet run -- --selftest` |
 
 所有语言的单元测试共用同一组**黄金测试向量**（文档 6.4），签名结果跨语言逐字节一致。
 
@@ -24,6 +25,7 @@
 | Java | `sdk/java/Example.java` | `javac Example.java && java Example` |
 | JavaScript | `sdk/js/example.mjs` | `node example.mjs` |
 | TypeScript | `sdk/ts/example.ts` | `node --experimental-strip-types example.ts` |
+| C# | `csharp/Example.cs` | `cd csharp && dotnet run -- --secret-id ... --secret-key ... --scope buyer` |
 
 示例默认读环境变量 `HUOPAN_SECRET_ID` / `HUOPAN_SECRET_KEY` / `HUOPAN_BASE_URL` / `HUOPAN_SCOPE`（`admin` 默认、`seller`、`buyer`）。
 
